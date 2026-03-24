@@ -16,6 +16,7 @@
 
 ### 2. 実行 (15分)
 - 実際のタスク遂行
+- **成果物を生成**: `/workspace/deliverables/` に出力
 
 ### 3. スプリントレビュー (5分)
 - 成果物の確認
@@ -24,13 +25,36 @@
 - 何がうまくいったか
 - 何を改善できるか
 
+## 📦 成果物出力
+
+**必ず `/workspace/deliverables/` に成果物を出力すること！**
+
+### 出力形式
+```
+```file:/workspace/deliverables/ファイル名.拡張子
+（ファイル内容）
+```
+```
+
+### 成果物の例
+
+| アジェンダ | 成果物 |
+|-----------|--------|
+| ドキュメント改善 | `deliverables/README-update.md` |
+| 技術調査 | `deliverables/tech-report.md` |
+| 新機能実装 | `deliverables/feature-xxx.sh` |
+| テスト作成 | `deliverables/test-xxx.sh` |
+| 設計書 | `deliverables/design.md` |
+
 ## 出力形式
 
 ```markdown
 ### 🎯 スプリントゴール
 ### 📋 スプリントバックログ
 ### ✅ 完了したタスク
-### 📦 インクリメント (成果物)
+### 📦 成果物リスト
+- /workspace/deliverables/xxx.md
+- /workspace/deliverables/xxx.sh
 ### 🔍 レトロスペクティブ (Keep/Problem/Try)
 ### 🚫 ブロッカー
 ```
