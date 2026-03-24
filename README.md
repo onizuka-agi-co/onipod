@@ -15,6 +15,17 @@ CTO会議とCEO会議が30分交替で実行され、自己改善して進化す
 | `company/history.md` | 沿革（追記型） | CEO会議で追記 |
 | `meetings/cto/*.md` | CTO会議議事録 | 毎時00分 |
 | `meetings/ceo/*.md` | CEO会議議事録 | 毎時30分 |
+| `deliverables/*.md` | **実際の成果物** | 会議で生成 |
+| `deliverables/*.sh` | **スクリプト等** | 会議で生成 |
+
+## 📦 成果物の例
+
+CTO会議/CEO会議で生成される成果物：
+
+- ドキュメント: README.md, GUIDE.md, 設計書
+- コード: スクリプト、設定ファイル
+- 調査レポート: 技術調査結果、ベストプラクティスまとめ
+- 戦略文書: 四半期計画、改善提案
 
 ## 🔄 自動コミットフロー
 
@@ -22,8 +33,9 @@ CTO会議とCEO会議が30分交替で実行され、自己改善して進化す
 毎時00分: CTO会議実行
     ↓
 議事録生成 → meetings/cto/YYYYMMDD_HHMM.md
+成果物生成 → deliverables/*.md, *.sh 等
     ↓
-git add company/ meetings/
+git add company/ meetings/ deliverables/
     ↓
 git commit -m "📄 CTO会議..."
     ↓
@@ -34,8 +46,9 @@ git push origin main
 毎時30分: CEO会議実行
     ↓
 CTO会議評価 → company/*.md 更新
+戦略文書生成 → deliverables/strategy-update.md
     ↓
-git add company/ meetings/
+git add company/ meetings/ deliverables/
     ↓
 git commit -m "👔 CEO会議..."
     ↓
@@ -46,10 +59,10 @@ git push origin main
 
 ## 📅 スケジュール
 
-| 時刻 | 会議 | 内容 |
-|------|------|------|
-| 00分 | CTO | アジャイルスプリント実行 |
-| 30分 | CEO | 評価・ルール改善 |
+| 時刻 | 会議 | 内容 | 成果物 |
+|------|------|------|--------|
+| 00分 | CTO | アジャイルスプリント実行 | コード、ドキュメント等 |
+| 30分 | CEO | 評価・ルール改善 | 戦略文書、ルール更新 |
 
 ## 🏗️ ディレクトリ構成
 
@@ -68,6 +81,10 @@ git push origin main
 │   │   └── YYYYMMDD_HHMM.md
 │   └── ceo/              # CEO会議議事録
 │       └── YYYYMMDD_HHMM.md
+├── deliverables/         # 📦 実際の成果物
+│   ├── *.md              # ドキュメント
+│   ├── *.sh              # スクリプト
+│   └── ...               # その他コード・設定
 ├── .gitignore            # .env, *.log のみ除外
 └── README.md             # このファイル
 ```
