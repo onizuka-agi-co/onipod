@@ -25,12 +25,19 @@
 - 品質は適切か？
 - 目的に合っているか？
 
-### 必要に応じて成果物も生成
+### 🚨 成果物を必ず生成（最重要）
+
+**評価後、必ず以下の形式で成果物ファイルを生成してください！**
+
 ```
-```file:/workspace/deliverables/strategy-update.md
-（戦略更新ドキュメントなど）
+===FILE_START:deliverables/ceo-report-YYYYMMDD.md===
+# CEO評価レポート
+（評価内容と改善点）
+===FILE_END===
 ```
-```
+
+**「完了しました」と言うだけで、実際にファイルを出力しないこと！**
+必ず `===FILE_START:deliverables/xxx===` 形式で出力すること！
 
 ## 修正するファイル
 
