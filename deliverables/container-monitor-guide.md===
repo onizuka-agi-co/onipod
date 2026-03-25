@@ -1,79 +1,36 @@
-# Container Monitor & Helper Scripts Guide
+# コンテナ監視スクリプト利用ガイド
 
 ## 概要
+`container-monitor.sh` はPodmanコンテナの状態を監視し、問題が検出された場合にアラートを送信するスクリプトです。
 
-このガイドでは、コンテナ監視・管理スクリプト（`container-monitor.sh` および `container-helper.sh`）の使用方法について説明します。
+## 機能
+- コンテナの稼働状況監視
+- リソース使用量監視 (CPU, メモリ)
+- ヘルスチェック対応コンテナの状態確認
+- Slack通知機能
+- ログ記録機能
 
-## ファイル構成
-
-```
-/workspace/
-├── container-monitor.sh    # コンテナ状態監視スクリプト
-├── container-helper.sh     # コンテナ操作補助スクリプト
-└── .env                   # 環境変数設定ファイル（任意）
-```
-
-## 依存関係
-
-- Podman v4.0以上
-- jq（JSON処理用）
-
-## 基本的な使い方
-
-### container-monitor.sh
-
-コンテナの状態をリアルタイムで監視します。
-
+## 使用方法
 ```bash
-# 単一監視
+# 通常実行
 ./container-monitor.sh
 
-# 継続的監視（10秒間隔）
-./container-monitor.sh --watch 10
-
 # 特定コンテナのみ監視
-./container-monitor.sh --container my-container
+./container-monitor.sh --containers webapp,db
 
-# JSON形式で出力
-./container-monitor.sh --json
-```
-
-### container-helper.sh
-
-コンテナ操作を簡略化するための補助スクリプト。
-
-```bash
-# 一時停止したコンテナを再開
-./container-helper.sh resume-all-stopped
-
-# 特定のイメージからコンテナを作成
-./container-helper.sh create-from-image nginx:latest
-
-# 不要なコンテナをクリーンアップ
-./container-helper.sh cleanup-unused
-```
-
-## 環境変数
-
-必要に応じて `.env` ファイルを作成して環境変数を設定できます：
-
-```bash
-# .env
-MONITOR_INTERVAL=30
-CONTAINER_TIMEOUT=60
-LOG_LEVEL=info
-```
-
-## セキュリティ
-
-- スクリプト実行には十分な権限が必要です
-- 脆弱な環境変数やシークレット情報をスクリプト内に直接記述しないでください
-- 実行前にスクリプト内容を確認してください
-
-## デバッグ
-
-詳細なログを表示するには `--debug` フラグを使用します：
-
-```bash
+# デバッグモード
 ./container-monitor.sh --debug
 ```
+
+## 設定ファイル
+`.env` ファイルで以下を設定可能：
+- `SLACK_WEBHOOK_URL`: Slack通知用Webhook URL
+- `CONTAINER_LIST`: 監視対象コンテナリスト
+- `CPU_THRESHOLD`: CPU使用率警告閾値 (%)
+- `MEMORY_THRESHOLD`: メモリ使用率警告閾値 (%)
+
+## 通知内容
+- コンテナ停止検出時
+- リソース使用率超過時
+- ヘルスチェック失敗時
+- システム異常時
