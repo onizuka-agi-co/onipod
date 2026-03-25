@@ -12,6 +12,11 @@ readonly LOG_FILE="/tmp/${SCRIPT_NAME}.log"
 readonly CONFIG_DIR="${HOME}/.config/oni-pod"
 readonly CONFIG_FILE="${CONFIG_DIR}/config.yaml"
 
+# Notification and alerting configuration
+readonly ALERT_EMAIL="${ALERT_EMAIL:-}"
+readonly RESOURCE_THRESHOLD_CPU="${RESOURCE_THRESHOLD_CPU:-80}"
+readonly RESOURCE_THRESHOLD_MEM="${RESOURCE_THRESHOLD_MEM:-80}"
+
 # Logging function
 log() {
     local message="$1"
@@ -35,15 +40,18 @@ Commands:
     logs CONTAINER_ID       Show logs of a container
     logs CONTAINER_ID follow  Follow container logs continuously
     monitor                 Monitor all containers continuously
+    monitor-alerts          Monitor all containers with alerts for failures and high resource usage
     health-check            Perform health check on all containers
     health-check CONTAINER  Perform health check on specific container
     create IMAGE NAME       Create a new secure container
     exec CONTAINER COMMAND  Execute command in a running container
     remove CONTAINER_ID     Remove a stopped container
     inspect CONTAINER_ID    Show detailed container information
-    stats                  Show resource usage statistics for all containers
-    prune                  Remove unused containers, networks, and images
-    resources             Show detailed resource usage for all containers
+    stats                   Show resource usage statistics for all containers
+    prune                   Remove unused containers, networks, and images
+    resources               Show detailed resource usage for all containers
+    check-resources CONTAINER_ID  Check resource usage for specific container with alerts
+    check-health            Check health status of all containers with alerts
 
 Options:
     -h, --help              Show this help message
@@ -67,10 +75,32 @@ check_podman_installed() {
 
 # Load configuration if it exists
 load_config() {
+    # Create config directory if it doesn't exist
+    mkdir -p "$CONFIG_DIR"
+
     if [[ -f "$CONFIG_FILE" ]]; then
         log "Loading configuration from $CONFIG_FILE"
+        # Source the config file if it contains bash-compatible variables
+        # Example: ALERT_EMAIL=user@example.com, RESOURCE_THRESHOLD_CPU=85, etc.
+        if [[ -r "$CONFIG_FILE" ]]; then
+            # Attempt to convert YAML-like config to bash variables
+            # For now, we'll look for any bash export statements
+            source "$CONFIG_FILE" 2>/dev/null || {
+                log "Warning: Could not source $CONFIG_FILE as bash script"
+                # Try to extract config values from YAML format
+                if command -v yq &> /dev/null; then
+                    ALERT_EMAIL=$(yq -r '.alert_email // ""' "$CONFIG_FILE" 2>/dev/null)
+                    RESOURCE_THRESHOLD_CPU=$(yq -r '.resource_threshold_cpu // "80"' "$CONFIG_FILE" 2>/dev/null)
+                    RESOURCE_THRESHOLD_MEM=$(yq -r '.resource_threshold_mem // "80"' "$CONFIG_FILE" 2>/dev/null)
+                fi
+            }
+        fi
     else
         log "Configuration file not found, using defaults"
+        # Set defaults if not already set by environment variables
+        ALERT_EMAIL="${ALERT_EMAIL:-}"
+        RESOURCE_THRESHOLD_CPU="${RESOURCE_THRESHOLD_CPU:-80}"
+        RESOURCE_THRESHOLD_MEM="${RESOURCE_THRESHOLD_MEM:-80}"
     fi
 }
 
@@ -445,6 +475,106 @@ resources_containers() {
     done
 }
 
+# Send notification via email or desktop notification
+send_notification() {
+    local level="$1"  # info, warning, error
+    local message="$2"
+    local subject="Podman Alert: $level - ${message:0:50}..."
+
+    # Log the message first
+    log "[$level] $message"
+
+    # Send desktop notification if notify-send is available
+    if command -v notify-send &> /dev/null; then
+        notify-send "Podman $level" "$message" --urgency "${level:0:1}" --expire-time 5000
+    fi
+
+    # Send email if configured
+    if [[ -n "$ALERT_EMAIL" ]]; then
+        if command -v mail &> /dev/null; then
+            echo "$message" | mail -s "$subject" "$ALERT_EMAIL"
+        else
+            log "ERROR: Mail command not available for sending email notifications"
+        fi
+    fi
+}
+
+# Check resource usage and send alerts if thresholds are exceeded
+check_resource_usage() {
+    local container_id="$1"
+    local cpu_threshold="${2:-$RESOURCE_THRESHOLD_CPU}"
+    local mem_threshold="${3:-$RESOURCE_THRESHOLD_MEM}"
+
+    # Get container stats
+    local stats_line
+    stats_line=$(podman stats --no-stream --format "table {{.CPUPerc}}\t{{.MemPerc}}" 2>/dev/null | grep "$container_id" | head -n 1)
+
+    if [[ -n "$stats_line" ]]; then
+        # Extract CPU and memory percentages
+        local cpu_usage=$(echo "$stats_line" | awk '{print $1}' | sed 's/%//')
+        local mem_usage=$(echo "$stats_line" | awk '{print $2}' | sed 's/%//')
+
+        # Remove percentage sign and compare with threshold
+        cpu_usage=${cpu_usage%.*}
+        mem_usage=${mem_usage%.*}
+
+        if [[ -n "$cpu_usage" && "$cpu_usage" -gt "$cpu_threshold" ]]; then
+            send_notification "warning" "High CPU usage detected for container $container_id: ${cpu_usage}% (threshold: ${cpu_threshold}%)"
+        fi
+
+        if [[ -n "$mem_usage" && "$mem_usage" -gt "$mem_threshold" ]]; then
+            send_notification "warning" "High memory usage detected for container $container_id: ${mem_usage}% (threshold: ${mem_threshold}%)"
+        fi
+    fi
+}
+
+# Monitor container health and send alerts for failures
+monitor_container_health() {
+    local containers=$(podman ps -a --format "{{.ID}}\t{{.Names}}\t{{.Status}}" 2>/dev/null)
+
+    while IFS=$'\t' read -r id name status; do
+        if [[ -n "$id" && -n "$name" && -n "$status" ]]; then
+            # Check if container is unhealthy or has failed
+            local health_status=$(podman inspect --format '{{.State.Health.Status}}' "$name" 2>/dev/null || echo "none")
+
+            # Check for exit codes indicating failure
+            local exit_code=$(podman inspect --format '{{.State.ExitCode}}' "$name" 2>/dev/null || echo "")
+
+            if [[ "$status" == *"Exited"* ]] || [[ "$status" == *"Created"* ]]; then
+                # Container has exited or failed to start properly
+                send_notification "error" "Container $name ($id) has exited with status: $status"
+            elif [[ "$health_status" == "unhealthy" ]]; then
+                send_notification "error" "Container $name ($id) health check failed: $health_status"
+            elif [[ -n "$exit_code" && "$exit_code" -ne 0 ]]; then
+                send_notification "error" "Container $name ($id) has non-zero exit code: $exit_code"
+            fi
+        fi
+    done <<< "$containers"
+}
+
+# Monitor containers continuously with alerts
+monitor_containers_with_alerts() {
+    log "Starting container monitoring with alerts..."
+    echo "Monitoring containers with alerts (Press Ctrl+C to stop)..."
+
+    # Initial health check
+    monitor_container_health
+
+    # Continuous monitoring loop
+    trap 'echo -e "\nMonitoring stopped."; exit 0' SIGINT SIGTERM
+    while true; do
+        monitor_container_health
+
+        # Check resource usage for all running containers
+        local running_containers=$(podman ps -q 2>/dev/null)
+        for container_id in $running_containers; do
+            check_resource_usage "$container_id"
+        done
+
+        sleep 30  # Check every 30 seconds
+    done
+}
+
 # Main function
 main() {
     local command="${1:-}"
@@ -502,6 +632,15 @@ main() {
             ;;
         resources)
             resources_containers
+            ;;
+        check-resources)
+            check_resource_usage "$2" "${3:-$RESOURCE_THRESHOLD_CPU}" "${4:-$RESOURCE_THRESHOLD_MEM}"
+            ;;
+        check-health)
+            monitor_container_health
+            ;;
+        monitor-alerts)
+            monitor_containers_with_alerts
             ;;
         *)
             log "ERROR: Unknown command '$command'"

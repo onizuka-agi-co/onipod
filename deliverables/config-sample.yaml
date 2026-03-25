@@ -1,0 +1,11 @@
+# Sample configuration file for Podman Manager
+# Copy this file to ~/.config/oni-pod/config.yaml to customize settings
+
+# Email address for alerts (optional)
+alert_email: "admin@example.com"
+
+# Resource usage thresholds (%) that trigger alerts
+resource_threshold_cpu: 80
+resource_threshold_mem: 85
+
+# Additional notification settings can be added here
