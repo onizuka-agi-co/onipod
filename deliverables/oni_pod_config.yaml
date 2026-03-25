@@ -1,0 +1,106 @@
+# Oni Pod Configuration File
+# This file defines the default settings for Oni Pod operations
+
+version: "1.0"
+
+# Security settings
+security:
+  # Enable read-only root filesystem by default
+  read_only_root: true
+
+  # Set user namespace mapping
+  userns: "auto"
+
+  # Security options
+  security_options:
+    - "no-new-privileges"
+
+  # Seccomp profile for syscall filtering
+  seccomp_profile: "default"
+
+  # Default capabilities (restricted)
+  default_capabilities: []
+
+  # Drop all capabilities by default
+  drop_all_capabilities: true
+
+# Networking settings
+networking:
+  # Default network mode
+  default_network: "bridge"
+
+  # Network restrictions
+  allow_host_networking: false
+
+  # DNS settings
+  dns_servers: []
+  dns_search_domains: []
+
+# Logging settings
+logging:
+  # Log driver to use
+  driver: "k8s-file"
+
+  # Log file location
+  log_dir: "~/.local/share/oni-pod/logs"
+
+  # Max log file size
+  max_size: "10m"
+
+  # Max number of log files to retain
+  max_file: 3
+
+# Monitoring settings
+monitoring:
+  # Enable automatic monitoring
+  enabled: true
+
+  # Monitor interval in seconds
+  interval: 30
+
+  # Enable health checks
+  health_checks: true
+
+  # Health check timeout in seconds
+  health_check_timeout: 30
+
+# Runtime settings
+runtime:
+  # Path to podman executable
+  podman_path: "/usr/bin/podman"
+
+  # Additional podman options
+  podman_options: []
+
+  # Enable systemd integration
+  enable_systemd: false
+
+# Resource limits (applied by default to all containers)
+resources:
+  # Memory limit (empty means no limit)
+  memory_limit: ""
+
+  # CPU shares (empty means no limit)
+  cpu_shares: ""
+
+  # Enable cgroup v2
+  enable_cgroup_v2: true
+
+# Image settings
+images:
+  # Automatically pull images if not present
+  auto_pull: true
+
+  # Require signed images (enforced if registry supports)
+  require_signed_images: false
+
+  # Allow insecure registries (only for development)
+  allow_insecure_registries: false
+
+# Storage settings
+storage:
+  # Storage driver
+  storage_driver: "overlay"
+
+  # Storage options
+  storage_opts: []
